@@ -81,7 +81,7 @@ public class ScrollQuery {
             scrollId = searchScrollResponse.getScrollId();
         }
 
-        results.remove(0);
+        if(!result.isEmpty()) results.remove(0);
         return results;
     }
 
