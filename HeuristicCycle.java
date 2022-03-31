@@ -26,42 +26,35 @@ public class HeuristicCycle {
 
     private String index_name;
     private RestHighLevelClient client;
-    private ScrollQuery sq;
     private ArrayList<String> duplicates;
 
     public HeuristicCycle(String index_name){
         this.index_name = index_name;
-        sq = new ScrollQuery(index_name);
-        sq.connectToElastic();
         duplicates = new ArrayList<>();
     }
 
     public void findDuplicates() throws IOException {
         connectToElastic();
 
-        //prima scroll per prendere uno ad uno gli _id
+        //scroll per prendere uno ad uno gli _id
         SearchRequest request = new SearchRequest(index_name);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.from(0);
-        sourceBuilder.size(100);
+        sourceBuilder.size(500);
         request.source(sourceBuilder);
         request.scroll(TimeValue.timeValueMinutes(15));
         SearchResponse response = client.search(request, RequestOptions.DEFAULT);
-        SearchHits hits = response.getHits();
 
         ArrayList<String> results = new ArrayList<>();
         for (SearchHit hit : response.getHits()) {
-            //seconda scroll per usare l'euristica
-            //Heuristic h = new Heuristic(hit.getId(), index_name);
-            //addDuplicate(sq.queryScroll(h.buildQuery()));
-            Heuristic h = new Heuristic(hit.getId(), index_name,
+            Heuristic h = new Heuristic(client, hit.getId(), index_name,
                     500,
                     0,
                     1,
                     12);
             BoolQueryBuilder find_duplicates = h.buildQuery();
             if(!(find_duplicates == null)){
-                addDuplicate(hit, sq.queryScroll(find_duplicates));
+                singleSearch(find_duplicates, hit);
             }
             results.add(hit.getId());
         }
@@ -77,20 +70,16 @@ public class HeuristicCycle {
             scroll_request.scroll(TimeValue.timeValueMinutes(15));
             SearchResponse searchScrollResponse = client.scroll(scroll_request, RequestOptions.DEFAULT);
 
-            scrollId = searchScrollResponse.getScrollId();
-
-            hits = searchScrollResponse.getHits();
-
             results = new ArrayList<String>();
             for (SearchHit hit : searchScrollResponse.getHits()) {
-                Heuristic h = new Heuristic(hit.getId(), index_name,
+                Heuristic h = new Heuristic(client, hit.getId(), index_name,
                         500,
                         0,
                         1,
                         12);
                 BoolQueryBuilder find_duplicates = h.buildQuery();
                 if(!(find_duplicates == null)){
-                    addDuplicate(hit, sq.queryScroll(find_duplicates));
+                    singleSearch(find_duplicates, hit);
                 }
                 results.add(hit.getId());
             }
@@ -120,19 +109,31 @@ public class HeuristicCycle {
     private void connectToElastic(){
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials("?????????", "???????"));
+                new UsernamePasswordCredentials("tirocini", "dpZfBAXLF7qq438T"));
         RestClientBuilder builder = RestClient.builder(new HttpHost("es.tirocini.netseven.it", 443, "https"))
-                .setHttpClientConfigCallback(new RestClientBuilder.HttpClientConfigCallback() {
-                    @Override
-                    public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
-                        return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-                    }
-                });
+                .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
         this.client = new RestHighLevelClient(builder);
     }
 
     private void closeConnection() throws IOException {
         client.close();
+    }
+
+    //Query per trovare i duplicati di un singolo documento
+    private ArrayList<String> singleSearch(BoolQueryBuilder bq, SearchHit searchHit) throws IOException {
+        ArrayList<String> duplicates = new ArrayList<>();
+        SearchRequest singleDocRequest = new SearchRequest(index_name);
+        SearchSourceBuilder singleDocBuilder = new SearchSourceBuilder();
+        singleDocBuilder.query(bq);
+        singleDocRequest.source(singleDocBuilder);
+        SearchResponse singleDocResponse = client.search(singleDocRequest, RequestOptions.DEFAULT);
+        SearchHits results = singleDocResponse.getHits();
+        for(SearchHit hit : results){
+            duplicates.add(hit.getId());
+        }
+        if(!duplicates.isEmpty())   duplicates.remove(0);
+        if(!duplicates.isEmpty())   System.out.println(searchHit.getId()+" has duplicates:\n"+duplicates);
+        return duplicates;
     }
 
 }
