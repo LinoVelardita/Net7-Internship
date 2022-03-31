@@ -1,17 +1,9 @@
+
 package com.net7.scre.processors;
 
-import com.net7.scre.utils.QueryBuilder;
-import org.apache.http.HttpHost;
-import org.apache.http.auth.AuthScope;
-import org.apache.http.auth.UsernamePasswordCredentials;
-import org.apache.http.client.CredentialsProvider;
-import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.action.get.GetRequest;
 import org.elasticsearch.action.get.GetResponse;
 import org.elasticsearch.client.RequestOptions;
-import org.elasticsearch.client.RestClient;
-import org.elasticsearch.client.RestClientBuilder;
 import org.elasticsearch.client.RestHighLevelClient;
 import org.elasticsearch.common.unit.Fuzziness;
 import org.elasticsearch.index.query.BoolQueryBuilder;
@@ -39,10 +31,12 @@ public class Heuristic {
                                         //1 -> numero di autori +-1
     private int years_threshold;
     private int title_size_threshold;   //lunghezza minima per poter inserire il titolo nell'euristica
+    public RestHighLevelClient client;
 
-    public Heuristic(String _id, String index_name, int title_threshold, int n_authors_threshold, int years_threshold, int title_size_threshold) throws IOException {
+    public Heuristic(RestHighLevelClient client, String _id, String index_name, int title_threshold, int n_authors_threshold, int years_threshold, int title_size_threshold) throws IOException {
         this._id = _id;
         this.index_name = index_name;
+        this.client = client;
 
         //threshold to build Heuristic Query
         this.title_threshold = title_threshold;
@@ -60,6 +54,7 @@ public class Heuristic {
         this.n_authors = n_authors;
         this.year_of_publication = year_of_publication;
     }
+
 
     /*
         ritorna null se non ho abbastanza dati per poter usare l'euristica
@@ -90,18 +85,22 @@ public class Heuristic {
         if(exists_doi)
             heuristic.should(new MatchQueryBuilder("doi.keyword", doi));
 
-        if(exists_data){
-            sliceQuery.must(BuildTitleQuery());
-            BoolQueryBuilder bq_year = BuildYearQuery();
-            BoolQueryBuilder bq_n_authors = BuildNAuthorsQuery();
-            if(bq_year != null)
-                sliceQuery.should(bq_year);
-            if(bq_n_authors != null)
-                sliceQuery.should(bq_n_authors);
-            sliceQuery.minimumShouldMatch(1);
+        else if (exists_data) {
+                sliceQuery.must(BuildTitleQuery());
+                BoolQueryBuilder bq_year = BuildYearQuery();
+                BoolQueryBuilder bq_n_authors = BuildNAuthorsQuery();
+                if (bq_year != null)
+                    sliceQuery.should(bq_year);
+                if (bq_n_authors != null)
+                    sliceQuery.should(bq_n_authors);
+                /*
+                    minimumShouldMatch(2) ->
+                    titolo simile e un match esatto tra anno e numero di autori
+                 */
+                sliceQuery.minimumShouldMatch(2);
 
-            heuristic.should(sliceQuery);
-        }
+                heuristic.should(sliceQuery);
+            }
         /*
             minimumShouldMatch(1) ->
             se trovo il doi uguale
@@ -113,32 +112,13 @@ public class Heuristic {
     }
 
     private void fillData() throws IOException {
-        RestHighLevelClient client = connect();         //CONNECT TO ELASTIC
         GetRequest request = new GetRequest(index_name, _id);
         GetResponse response = client.get(request, RequestOptions.DEFAULT);
         title = (String) response.getSourceAsMap().get("normalized_title");
         doi = (String) response.getSourceAsMap().get("doi");
         n_authors = (Integer) response.getSourceAsMap().get("number_of_authors");
         year_of_publication = (ArrayList<String>) response.getSourceAsMap().get("year_of_publication");
-        client.close();             //CLOSE CONNECTION
     }
-
-    private RestHighLevelClient connect(){
-        final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
-        credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials("???????", "???????"));
-        RestClientBuilder builder = RestClient.builder(new HttpHost("es.tirocini.netseven.it", 443, "https"))
-                .setHttpClientConfigCallback(new RestClientBuilder.HttpClientConfigCallback() {
-                    @Override
-                    public HttpAsyncClientBuilder customizeHttpClient(HttpAsyncClientBuilder httpClientBuilder) {
-                        return httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider);
-                    }
-                });
-        RestHighLevelClient client = new RestHighLevelClient(builder);
-        return client;
-    }
-
-
 
     //------------Query Builders di supporto-------------------
 
