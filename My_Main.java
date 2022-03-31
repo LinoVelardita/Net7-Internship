@@ -48,7 +48,6 @@ public class My_Main {
         /*
         HeuristicCycle hc = new HeuristicCycle("deduplication_index");
         hc.findDuplicates();
-        System.out.println(hc.getDuplicates());
 
          */
 
