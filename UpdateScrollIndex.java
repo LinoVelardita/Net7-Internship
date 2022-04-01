@@ -52,7 +52,7 @@ public class UpdateScrollIndex {
         //connect to elastic
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials("tirocini", "dpZfBAXLF7qq438T"));
+                new UsernamePasswordCredentials("?????", "?????"));
         RestClientBuilder builder = RestClient.builder(new HttpHost("es.tirocini.netseven.it", 443, "https"))
                 .setHttpClientConfigCallback(new RestClientBuilder.HttpClientConfigCallback() {
                     @Override
