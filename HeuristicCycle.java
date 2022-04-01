@@ -5,7 +5,6 @@ import org.apache.http.auth.AuthScope;
 import org.apache.http.auth.UsernamePasswordCredentials;
 import org.apache.http.client.CredentialsProvider;
 import org.apache.http.impl.client.BasicCredentialsProvider;
-import org.apache.http.impl.nio.client.HttpAsyncClientBuilder;
 import org.elasticsearch.action.search.SearchRequest;
 import org.elasticsearch.action.search.SearchResponse;
 import org.elasticsearch.action.search.SearchScrollRequest;
@@ -40,7 +39,7 @@ public class HeuristicCycle {
         SearchRequest request = new SearchRequest(index_name);
         SearchSourceBuilder sourceBuilder = new SearchSourceBuilder();
         sourceBuilder.from(0);
-        sourceBuilder.size(500);
+        sourceBuilder.size(300);
         request.source(sourceBuilder);
         request.scroll(TimeValue.timeValueMinutes(15));
         SearchResponse response = client.search(request, RequestOptions.DEFAULT);
@@ -54,11 +53,11 @@ public class HeuristicCycle {
                     12);
             BoolQueryBuilder find_duplicates = h.buildQuery();
             if(!(find_duplicates == null)){
-                singleSearch(find_duplicates, hit);
+                duplicates.addAll(singleSearch(find_duplicates, hit));
             }
             results.add(hit.getId());
         }
-        System.out.println(duplicates);
+        //System.out.println(duplicates);
         System.out.println("------ results: " + results.size() + ", scrollId: " + response.getScrollId());
 
         String scrollId = response.getScrollId();
@@ -79,11 +78,11 @@ public class HeuristicCycle {
                         12);
                 BoolQueryBuilder find_duplicates = h.buildQuery();
                 if(!(find_duplicates == null)){
-                    singleSearch(find_duplicates, hit);
+                    duplicates.addAll(singleSearch(find_duplicates, hit));
                 }
                 results.add(hit.getId());
             }
-            System.out.println(duplicates);
+            //System.out.println(duplicates);
             System.out.println("------ results: " + results.size() + ", scrollId: " + searchScrollResponse.getScrollId());
             hasNext = !results.isEmpty();
             scrollId = searchScrollResponse.getScrollId();
@@ -109,7 +108,7 @@ public class HeuristicCycle {
     private void connectToElastic(){
         final CredentialsProvider credentialsProvider = new BasicCredentialsProvider();
         credentialsProvider.setCredentials(AuthScope.ANY,
-                new UsernamePasswordCredentials("tirocini", "dpZfBAXLF7qq438T"));
+                new UsernamePasswordCredentials("????", "????"));
         RestClientBuilder builder = RestClient.builder(new HttpHost("es.tirocini.netseven.it", 443, "https"))
                 .setHttpClientConfigCallback(httpClientBuilder -> httpClientBuilder.setDefaultCredentialsProvider(credentialsProvider));
         this.client = new RestHighLevelClient(builder);
