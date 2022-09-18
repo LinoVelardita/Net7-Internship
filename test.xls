@@ -1,0 +1,16 @@
+  SizeTitle t.	Similar title t.	   Authors t.	      Year t.	       Precision	          Recall	            F1	     true +	    false +	    false -	TOT MATCH
+18	200	1	1	0.88	0.88	0.88	37	5	5	42
+18	1000	0	1	0.88	0.88	0.88	37	5	5	42
+28	500	0	1	0.92	0.83	0.87	35	3	7	38
+24	1000	0	1	0.87	0.81	0.84	34	5	8	39
+22	1000	0	1	0.85	0.83	0.84	35	6	7	41
+8	500	0	1	0.82	0.95	0.88	40	9	2	49
+										
+										
+	 Test	Doc totali	fasli positivi	falsi negativi						
+	8	49	9	2						
+	18	42	5	5						
+	22	41	6	7						
+	24	39	5	8						
+	28	38	3	7						
+										
